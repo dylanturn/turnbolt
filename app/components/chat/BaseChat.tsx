@@ -17,18 +17,23 @@ import Cookies from 'js-cookie';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 import styles from './BaseChat.module.scss';
-import type { ProviderInfo } from '~/utils/types';
-import { ExportChatButton } from '~/components/chat/chatExportAndImport/ExportChatButton';
-import { ImportButtons } from '~/components/chat/chatExportAndImport/ImportButtons';
-import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
+import type { ModelInfo } from '~/utils/types';
 
-const providerList = PROVIDER_LIST;
+const EXAMPLE_PROMPTS = [
+  { text: 'Build a todo app in React using Tailwind' },
+  { text: 'Build a simple blog using Astro' },
+  { text: 'Create a cookie consent form using Material UI' },
+  { text: 'Make a space invaders game' },
+  { text: 'How do I center a div?' },
+];
+
+const providerList = [...new Set(MODEL_LIST.map((model) => model.provider))]
 
 const ModelSelector = ({ model, setModel, provider, setProvider, modelList, providerList }) => {
   return (
-    <div className="mb-2 flex gap-2 flex-col sm:flex-row">
+    <div className="mb-2 flex gap-2">
       <select
-        value={provider?.name}
+        value={provider}
         onChange={(e) => {
           setProvider(providerList.find((p: ProviderInfo) => p.name === e.target.value));
 
@@ -83,8 +88,10 @@ interface BaseChatProps {
   sendMessage?: (event: React.UIEvent, messageInput?: string) => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   enhancePrompt?: () => void;
-  importChat?: (description: string, messages: Message[]) => Promise<void>;
-  exportChat?: () => void;
+}
+
+function getFreeModels(models) {
+  return models.filter(m => Number(m.pricing.prompt) + Number(m.pricing.completion) === 0);
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -115,8 +122,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-    const [modelList, setModelList] = useState(MODEL_LIST);
-
+    const [models, setModels] = useState<ModelInfo[]>(MODEL_LIST);
 
     useEffect(() => {
       // Load API keys from cookies on component mount
@@ -136,11 +142,33 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         // Clear invalid cookie data
         Cookies.remove('apiKeys');
       }
-
-      initializeModelList().then(modelList => {
-        setModelList(modelList);
-      });
     }, []);
+
+    useEffect(() => {
+      fetchModels();
+    }, []);
+
+    const fetchModels = async () => {
+      try {
+        const response = await fetch('/api/openrouter-models');
+        const data = await response.json();
+        if (data.models) {
+          setModels(data.models);
+          const models = data.models;
+          if (!models.find(m => m.id === model)) {
+            setModel(models[0]?.id || '');
+          }
+          setModels([...(MODEL_LIST.filter(m => m.provider !== 'OpenRouter')),
+            ...models.sort((a, b) => a.name.localeCompare(b.name)).map(m => ({
+                name: m.id,
+                label: m.name,
+                provider: 'OpenRouter'
+              }))])
+        }
+      } catch (error) {
+        console.error('Error fetching models:', error);
+      }
+    };
 
     const updateApiKey = (provider: string, key: string) => {
       try {
@@ -159,7 +187,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       }
     };
 
-    const baseChat = (
+
+
+    return (
       <div
         ref={ref}
         className={classNames(
@@ -210,7 +240,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   key={provider?.name + ':' + modelList.length}
                   model={model}
                   setModel={setModel}
-                  modelList={modelList}
+                  modelList={models}
                   provider={provider}
                   setProvider={setProvider}
                   providerList={PROVIDER_LIST}
@@ -319,3 +349,4 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     return <Tooltip.Provider delayDuration={200}>{baseChat}</Tooltip.Provider>;
   },
 );
+
