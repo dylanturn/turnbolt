@@ -323,7 +323,7 @@ async function getOpenAILikeModels(): Promise<ModelInfo[]> {
     }));
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {
-    return [];
+    return []
   }
 }
 
@@ -335,67 +335,37 @@ type OpenRouterModelsResponse = {
     pricing: {
       prompt: number;
       completion: number;
-    };
-  }[];
+    }
+  }[]
 };
 
 async function getOpenRouterModels(): Promise<ModelInfo[]> {
-  const data: OpenRouterModelsResponse = await (
-    await fetch('https://openrouter.ai/api/v1/models', {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-  ).json();
+  const data: OpenRouterModelsResponse = await (await fetch('https://openrouter.ai/api/v1/models', {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })).json();
 
-  return data.data
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((m) => ({
-      name: m.id,
-      label: `${m.name} - in:$${(m.pricing.prompt * 1_000_000).toFixed(
-        2,
-      )} out:$${(m.pricing.completion * 1_000_000).toFixed(2)} - context ${Math.floor(m.context_length / 1000)}k`,
-      provider: 'OpenRouter',
-      maxTokenAllowed: 8000,
-    }));
+  return data.data.sort((a, b) => a.name.localeCompare(b.name)).map(m => ({
+    name: m.id,
+    label: `${m.name} - in:$${(m.pricing.prompt * 1_000_000).toFixed(
+      2)} out:$${(m.pricing.completion * 1_000_000).toFixed(2)} - context ${Math.floor(
+      m.context_length / 1000)}k`,
+    provider: 'OpenRouter'
+  }));
 }
 
-async function getLMStudioModels(): Promise<ModelInfo[]> {
-  try {
-    const baseUrl = import.meta.env.LMSTUDIO_API_BASE_URL || 'http://localhost:1234';
-    const response = await fetch(`${baseUrl}/v1/models`);
-    const data = (await response.json()) as any;
-
-    return data.data.map((model: any) => ({
-      name: model.id,
-      label: model.id,
-      provider: 'LMStudio',
-    }));
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
-    return [];
-  }
+async function initializeModelList(): Promise<void> {
+  const [
+    ollamaModels,
+    openAiLikeModels,
+    openRouterModels] = await Promise.all([
+    getOllamaModels(),
+    getOpenAILikeModels(),
+    getOpenRouterModels()
+  ]);
+  MODEL_LIST = [...ollamaModels, ...openAiLikeModels, ...staticModels, ...openRouterModels];
 }
-
-async function initializeModelList(): Promise<ModelInfo[]> {
-  MODEL_LIST = [
-    ...(
-      await Promise.all(
-        PROVIDER_LIST.filter(
-          (p): p is ProviderInfo & { getDynamicModels: () => Promise<ModelInfo[]> } => !!p.getDynamicModels,
-        ).map((p) => p.getDynamicModels()),
-      )
-    ).flat(),
-    ...staticModels,
-  ];
-  return MODEL_LIST;
-}
-
-export {
-  getOllamaModels,
-  getOpenAILikeModels,
-  getLMStudioModels,
-  initializeModelList,
-  getOpenRouterModels,
-  PROVIDER_LIST,
-};
+initializeModelList().then();
+export { getOllamaModels, getOpenAILikeModels, initializeModelList, getOpenRouterModels };
+x
