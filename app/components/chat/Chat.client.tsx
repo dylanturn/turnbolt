@@ -105,22 +105,20 @@ export const ChatImpl = memo(
 
     const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
 
-    const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
-      api: '/api/chat',
-      body: {
-        apiKeys,
-      },
-      onError: (error) => {
-        logger.error('Request failed\n\n', error);
-        toast.error(
-          'There was an error processing your request: ' + (error.message ? error.message : 'No details were returned'),
-        );
-      },
-      onFinish: () => {
-        logger.debug('Finished streaming');
-      },
-      initialMessages,
-    });
+  const { messages, isLoading, input, handleInputChange, setInput, stop, append } = useChat({
+    api: '/api/chat',
+    body: {
+      apiKeys
+    },
+    onError: (error) => {
+      logger.error('Request failed\n\n', error);
+      toast.error('There was an error processing your request: ' + error.message ? error.message : "No details were returned");
+    },
+    onFinish: () => {
+      logger.debug('Finished streaming');
+    },
+    initialMessages,
+  });
 
     const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
     const { parsedMessages, parseMessages } = useMessageParser();
