@@ -50,7 +50,7 @@ const ModelSelector = ({ model, setModel, provider, setProvider, modelList, prov
         ))}
       </select>
       <select
-        key={provider}
+        key={provider?.name}
         value={model}
         onChange={(e) => setModel(e.target.value)}
         className="flex-1 p-2 rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background text-bolt-elements-textPrimary focus:outline-none focus:ring-2 focus:ring-bolt-elements-focus transition-all lg:max-w-[70%] "
@@ -195,12 +195,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 }}
               </ClientOnly>
               <div
-                className={classNames(
-                  ' bg-bolt-elements-background-depth-2 p-3 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt mb-6',
-                  {
-                    'sticky bottom-2': chatStarted,
-                  },
-                )}
+                className={classNames('bg-bolt-elements-background-depth-2 border-y border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt', {
+                  'sticky bottom-0': chatStarted,
+                })}
               >
                 <ModelSelector
                   key={provider?.name + ':' + modelList.length}
