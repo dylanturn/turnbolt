@@ -355,17 +355,10 @@ async function getOpenRouterModels(): Promise<ModelInfo[]> {
   }));
 }
 
-async function initializeModelList(): Promise<void> {
-  const [
-    ollamaModels,
-    openAiLikeModels,
-    openRouterModels] = await Promise.all([
-    getOllamaModels(),
-    getOpenAILikeModels(),
-    getOpenRouterModels()
-  ]);
-  MODEL_LIST = [...ollamaModels, ...openAiLikeModels, ...staticModels, ...openRouterModels];
+async function initializeModelList(): Promise<ModelInfo[]> {
+  MODEL_LIST = [...(await Promise.all(
+    PROVIDER_LIST.filter(p => !!p.getDynamicModels).map(p => p.getDynamicModels()))).flat(), ...staticModels];
+  return MODEL_LIST;
 }
-initializeModelList().then();
-export { getOllamaModels, getOpenAILikeModels, initializeModelList, getOpenRouterModels };
-x
+
+export { getOllamaModels, getOpenAILikeModels, getLMStudioModels, initializeModelList, getOpenRouterModels, PROVIDER_LIST };
