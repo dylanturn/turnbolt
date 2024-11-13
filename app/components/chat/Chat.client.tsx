@@ -112,7 +112,7 @@ export const ChatImpl = memo(
     },
     onError: (error) => {
       logger.error('Request failed\n\n', error);
-      toast.error('There was an error processing your request: ' + error.message ? error.message : "No details were returned");
+      toast.error('There was an error processing your request: ' + (error.message ? error.message : "No details were returned"));
     },
     onFinish: () => {
       logger.debug('Finished streaming');
