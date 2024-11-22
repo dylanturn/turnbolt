@@ -14,7 +14,6 @@ import { Messages } from './Messages.client';
 import { SendButton } from './SendButton.client';
 import { APIKeyManager } from './APIKeyManager';
 import Cookies from 'js-cookie';
-import { exportChat, importChat } from '~/utils/chatExport';
 import { toast } from 'react-toastify';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
@@ -92,6 +91,8 @@ interface BaseChatProps {
   sendMessage?: (event: React.UIEvent, messageInput?: string) => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   enhancePrompt?: () => void;
+  importChat?: (description: string, messages: Message[]) => Promise<void>;
+  exportChat?: () => void;
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -115,8 +116,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       sendMessage,
       handleInputChange,
       enhancePrompt,
-      handleStop
-      handleStop
+      handleStop,
+      importChat,
+      exportChat
     },
     ref
     ref
@@ -303,7 +305,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                             </>
                           )}
                         </IconButton>
-                        <ClientOnly>{() => <ExportChatButton description={description} messages={messages}/>}</ClientOnly>
+                        <ClientOnly>{() => <ExportChatButton exportChat={exportChat}/>}</ClientOnly>
                       </div>
                       {input.length > 3 ? (
                         <div className="text-xs text-bolt-elements-textTertiary">
@@ -328,18 +330,31 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     accept=".json"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
-                      if (file) {
+                      if (file && importChat) {
                         try {
-                          const { messages: importedMessages } = await importChat(file);
-                          // Import each message
-                          for (const msg of importedMessages) {
-                            await sendMessage(new Event('import') as unknown as React.UIEvent, msg.content);
-                          }
-                          toast.success('Chat imported successfully');
+                          const reader = new FileReader();
+                          reader.onload = async (e) => {
+                            try {
+                              const content = e.target?.result as string;
+                              const data = JSON.parse(content);
+                              if (!Array.isArray(data.messages)) {
+                                toast.error('Invalid chat file format');
+                              }
+                              await importChat(data.description, data.messages);
+                              toast.success('Chat imported successfully');
+                            } catch (error) {
+                              toast.error('Failed to parse chat file');
+                            }
+                          };
+                          reader.onerror = () => toast.error('Failed to read chat file');
+                          reader.readAsText(file);
+
                         } catch (error) {
                           toast.error(error instanceof Error ? error.message : 'Failed to import chat');
                         }
                         e.target.value = ''; // Reset file input
+                      } else {
+                        toast.error('Something went wrong');
                       }
                     }}
                   />
