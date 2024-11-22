@@ -19,7 +19,6 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 
 import styles from './BaseChat.module.scss';
 import type { ProviderInfo } from '~/utils/types';
-import WithTooltip from '~/components/ui/Tooltip';
 import { ExportChatButton } from '~/components/chat/ExportChatButton';
 
 const EXAMPLE_PROMPTS = [
@@ -27,7 +26,7 @@ const EXAMPLE_PROMPTS = [
   { text: 'Build a simple blog using Astro' },
   { text: 'Create a cookie consent form using Material UI' },
   { text: 'Make a space invaders game' },
-  { text: 'How do I center a div?' }
+  { text: 'How do I center a div?' },
 ];
 
 const providerList = PROVIDER_LIST;
@@ -107,7 +106,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       enhancingPrompt = false,
       promptEnhanced = false,
       messages,
-      description,
       input = '',
       model,
       setModel,
@@ -118,10 +116,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       enhancePrompt,
       handleStop,
       importChat,
-      exportChat
+      exportChat,
     },
-    ref
-    ref
+    ref,
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
@@ -162,8 +159,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           expires: 30, // 30 days
           secure: true, // Only send over HTTPS
           sameSite: 'strict', // Protect against CSRF
-          path: '/' // Accessible across the site
-          path: '/' // Accessible across the site
+          path: '/', // Accessible across the site
         });
       } catch (error) {
         console.error('Error saving API keys to cookies:', error);
@@ -176,7 +172,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           ref={ref}
           className={classNames(
             styles.BaseChat,
-            'relative flex h-full w-full overflow-hidden bg-bolt-elements-background-depth-1'
+            'relative flex flex-col lg:flex-row h-full w-full overflow-hidden bg-bolt-elements-background-depth-1',
           )}
           data-chat-visible={showChat}
         >
@@ -194,8 +190,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </div>
               )}
               <div
-                className={classNames('pt-6 px-6', {
-                  'h-full flex flex-col': chatStarted
+                className={classNames('pt-6 px-2 sm:px-6', {
+                  'h-full flex flex-col': chatStarted,
                 })}
               >
                 <ClientOnly>
@@ -214,8 +210,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   className={classNames(
                     'bg-bolt-elements-background-depth-2 border-y border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
                     {
-                      'sticky bottom-0': chatStarted
-                    })}
+                      'sticky bottom-2': chatStarted,
+                    },
+                  )}
                 >
                   <ModelSelector
                     key={provider?.name + ':' + modelList.length}
@@ -225,6 +222,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     provider={provider}
                     setProvider={setProvider}
                     providerList={PROVIDER_LIST}
+                    apiKeys={apiKeys}
                   />
                   {provider && (
                     <APIKeyManager
@@ -233,37 +231,37 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       setApiKey={(key) => updateApiKey(provider.name, key)}
                     />
                   )}
+
                   <div
                     className={classNames(
-                      'shadow-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background backdrop-filter backdrop-blur-[8px] rounded-lg overflow-hidden transition-all'
+                      'shadow-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background backdrop-filter backdrop-blur-[8px] rounded-lg overflow-hidden transition-all',
                     )}
                   >
-                  <textarea
-                    ref={textareaRef}
-                    className={`w-full pl-4 pt-4 pr-16 focus:outline-none focus:ring-0 focus:border-none focus:shadow-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent transition-all`}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        if (event.shiftKey) {
-                          return;
+                    <textarea
+                      ref={textareaRef}
+                      className={`w-full pl-4 pt-4 pr-16 focus:outline-none focus:ring-0 focus:border-none focus:shadow-none resize-none text-md text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent transition-all`}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          if (event.shiftKey) {
+                            return;
+                          }
+
+                          event.preventDefault();
+
+                          sendMessage?.(event);
                         }
-
-                        event.preventDefault();
-
-                        sendMessage?.(event);
-                      }
-                    }}
-                    value={input}
-                    onChange={(event) => {
-                      handleInputChange?.(event);
-                    }}
-                    style={{
-                      minHeight: TEXTAREA_MIN_HEIGHT,
-                      maxHeight: TEXTAREA_MAX_HEIGHT
-                      maxHeight: TEXTAREA_MAX_HEIGHT
-                    }}
-                    placeholder="How can Bolt help you today?"
-                    translate="no"
-                  />
+                      }}
+                      value={input}
+                      onChange={(event) => {
+                        handleInputChange?.(event);
+                      }}
+                      style={{
+                        minHeight: TEXTAREA_MIN_HEIGHT,
+                        maxHeight: TEXTAREA_MAX_HEIGHT,
+                      }}
+                      placeholder="How can Bolt help you today?"
+                      translate="no"
+                    />
                     <ClientOnly>
                       {() => (
                         <SendButton
@@ -288,14 +286,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           className={classNames('transition-all', {
                             'opacity-100!': enhancingPrompt,
                             'text-bolt-elements-item-contentAccent! pr-1.5 enabled:hover:bg-bolt-elements-item-backgroundAccent!':
-                            promptEnhanced
+                              promptEnhanced,
                           })}
                           onClick={() => enhancePrompt?.()}
                         >
                           {enhancingPrompt ? (
                             <>
-                              <div
-                                className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl animate-spin"></div>
+                              <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl animate-spin"></div>
                               <div className="ml-1.5">Enhancing prompt...</div>
                             </>
                           ) : (
@@ -305,15 +302,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                             </>
                           )}
                         </IconButton>
-                        <ClientOnly>{() => <ExportChatButton exportChat={exportChat}/>}</ClientOnly>
+                        <ClientOnly>{() => <ExportChatButton exportChat={exportChat} />}</ClientOnly>
                       </div>
                       {input.length > 3 ? (
                         <div className="text-xs text-bolt-elements-textTertiary">
-                          Use <kbd
-                          className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Shift</kbd> +{' '}
-                          <kbd
-                            className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Return</kbd> for
-                          a new line
+                          Use <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Shift</kbd>{' '}
+                          + <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Return</kbd>{' '}
+                          for a new line
                         </div>
                       ) : null}
                     </div>
@@ -330,25 +325,28 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     accept=".json"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
+
                       if (file && importChat) {
                         try {
                           const reader = new FileReader();
+
                           reader.onload = async (e) => {
                             try {
                               const content = e.target?.result as string;
                               const data = JSON.parse(content);
+
                               if (!Array.isArray(data.messages)) {
                                 toast.error('Invalid chat file format');
                               }
+
                               await importChat(data.description, data.messages);
                               toast.success('Chat imported successfully');
                             } catch (error) {
-                              toast.error('Failed to parse chat file');
+                              toast.error('Failed to parse chat file: ' + error.message);
                             }
                           };
                           reader.onerror = () => toast.error('Failed to read chat file');
                           reader.readAsText(file);
-
                         } catch (error) {
                           toast.error(error instanceof Error ? error.message : 'Failed to import chat');
                         }
@@ -376,8 +374,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               )}
               {!chatStarted && (
                 <div id="examples" className="relative w-full max-w-xl mx-auto mt-8 flex justify-center">
-                  <div
-                    className="flex flex-col space-y-2 [mask-image:linear-gradient(to_bottom,black_0%,transparent_180%)] hover:[mask-image:none]">
+                  <div className="flex flex-col space-y-2 [mask-image:linear-gradient(to_bottom,black_0%,transparent_180%)] hover:[mask-image:none]">
                     {EXAMPLE_PROMPTS.map((examplePrompt, index) => {
                       return (
                         <button
@@ -401,5 +398,5 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         </div>
       </Tooltip.Provider>
     );
-  }
+  },
 );
