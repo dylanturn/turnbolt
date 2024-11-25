@@ -11,6 +11,7 @@ dist
 dist-ssr
 *.local
 
+.history
 .vscode/*
 .vscode/launch.json
 !.vscode/extensions.json
@@ -22,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
+/.history
 /.cache
 /build
 .env.local
@@ -31,3 +33,4 @@ dist-ssr
 _worker.bundle
 
 Modelfile
+modelfiles
