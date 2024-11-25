@@ -40,16 +40,7 @@ function extractPropertiesFromMessage(message: Message): { model: string; provid
   return { model, provider, content: cleanedContent };
 }
 
-<<<<<<< HEAD
 export function streamText(messages: Messages, env: Env, options?: StreamingOptions, apiKeys?: Record<string, string>) {
-=======
-export function streamText(
-  messages: Messages,
-  env: Env,
-  options?: StreamingOptions,
-  apiKeys?: Record<string, string>
-) {
->>>>>>> e328649 (Remove server side check of models for now)
   let currentModel = DEFAULT_MODEL;
   let currentProvider = DEFAULT_PROVIDER;
 

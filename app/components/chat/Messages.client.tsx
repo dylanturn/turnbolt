@@ -3,7 +3,7 @@ import React from 'react';
 import { classNames } from '~/utils/classNames';
 import { AssistantMessage } from './AssistantMessage';
 import { UserMessage } from './UserMessage';
-import { useLocation, useNavigate } from '@remix-run/react';
+import { useLocation } from '@remix-run/react';
 import { db, chatId } from '~/lib/persistence/useChatHistory';
 import { forkChat } from '~/lib/persistence/db';
 import { toast } from 'react-toastify';
@@ -83,13 +83,12 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
                     </WithTooltip>
 
                     <WithTooltip tooltip="Fork chat from this message">
-                    <WithTooltip tooltip="Fork chat from this message">
                       <button
                         onClick={() => handleFork(messageId)}
                         key="i-ph:git-fork"
                         className={classNames(
                           'i-ph:git-fork',
-                          'text-xl text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors'
+                          'text-xl text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors',
                         )}
                       />
                     </WithTooltip>

@@ -9,7 +9,7 @@ import { Menu } from '~/components/sidebar/Menu.client';
 import { IconButton } from '~/components/ui/IconButton';
 import { Workbench } from '~/components/workbench/Workbench.client';
 import { classNames } from '~/utils/classNames';
-import { MODEL_LIST, DEFAULT_PROVIDER, PROVIDER_LIST, ProviderInfo, initializeModelList } from '~/utils/constants';
+import { MODEL_LIST, PROVIDER_LIST, initializeModelList } from '~/utils/constants';
 import { Messages } from './Messages.client';
 import { SendButton } from './SendButton.client';
 import { APIKeyManager } from './APIKeyManager';
@@ -17,44 +17,21 @@ import Cookies from 'js-cookie';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 import styles from './BaseChat.module.scss';
+import type { ProviderInfo } from '~/utils/types';
+import { ExportChatButton } from '~/components/chat/chatExportAndImport/ExportChatButton';
+import { ImportButtons } from '~/components/chat/chatExportAndImport/ImportButtons';
+import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
 
-const EXAMPLE_PROMPTS = [
-  { text: 'Build a todo app in React using Tailwind' },
-  { text: 'Build a simple blog using Astro' },
-  { text: 'Create a cookie consent form using Material UI' },
-  { text: 'Make a space invaders game' },
-  { text: 'How do I center a div?' }
-];
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const providerList = PROVIDER_LIST;
 
-const GitHubBadge = () => {
+// @ts-ignore TODO: Introduce proper types
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ModelSelector = ({ model, setModel, provider, setProvider, modelList, providerList, apiKeys }) => {
   return (
-    <div className="text-center my-4">
-      <h3 className="text-xl font-semibold mb-2">2. Contribute to oTToDev/Bolt.New</h3>
-      <a
-        href="https://github.com/coleam00/bolt.new-any-llm"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center space-x-4"
-      >
-        <img
-          src="https://img.shields.io/github/stars/coleam00/bolt.new-any-llm?style=social"
-          alt="GitHub stars"
-          className="mr-2"
-        />
-        <img
-          src="https://img.shields.io/github/forks/coleam00/bolt.new-any-llm?style=social"
-          alt="GitHub forks"
-        />
-      </a>
-    </div>
-  );
-};
-
-const ModelSelector = ({ model, setModel, provider, setProvider, modelList, providerList }) => {
-  return (
-    <div className="mb-2 flex gap-2">
+    <div className="mb-2 flex gap-2 flex-col sm:flex-row">
       <select
-        value={provider}
+        value={provider?.name}
         onChange={(e) => {
           setProvider(providerList.find((p: ProviderInfo) => p.name === e.target.value));
 
@@ -73,14 +50,15 @@ const ModelSelector = ({ model, setModel, provider, setProvider, modelList, prov
         key={provider?.name}
         value={model}
         onChange={(e) => setModel(e.target.value)}
-        style={{maxWidth: "70%"}}
-        className="flex-1 p-2 rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background text-bolt-elements-textPrimary focus:outline-none focus:ring-2 focus:ring-bolt-elements-focus transition-all"
+        className="flex-1 p-2 rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background text-bolt-elements-textPrimary focus:outline-none focus:ring-2 focus:ring-bolt-elements-focus transition-all lg:max-w-[70%] "
       >
-        {currentModelList.map((modelOption) => (
-          <option key={modelOption.provider + ':' + modelOption.name} value={modelOption.name}>
-            {modelOption.label}
-          </option>
-        ))}
+        {[...modelList]
+          .filter((e) => e.provider == provider?.name && e.name)
+          .map((modelOption) => (
+            <option key={modelOption.name} value={modelOption.name}>
+              {modelOption.label}
+            </option>
+          ))}
       </select>
     </div>
   );
@@ -108,6 +86,8 @@ interface BaseChatProps {
   sendMessage?: (event: React.UIEvent, messageInput?: string) => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   enhancePrompt?: () => void;
+  importChat?: (description: string, messages: Message[]) => Promise<void>;
+  exportChat?: () => void;
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -130,14 +110,15 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       sendMessage,
       handleInputChange,
       enhancePrompt,
-      handleStop
+      handleStop,
+      importChat,
+      exportChat,
     },
-    ref
+    ref,
   ) => {
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
     const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
     const [modelList, setModelList] = useState(MODEL_LIST);
-
 
     useEffect(() => {
       // Load API keys from cookies on component mount
@@ -158,7 +139,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         Cookies.remove('apiKeys');
       }
 
-      initializeModelList().then(modelList => {
+      initializeModelList().then((modelList) => {
         setModelList(modelList);
       });
     }, []);
@@ -173,19 +154,19 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           expires: 30, // 30 days
           secure: true, // Only send over HTTPS
           sameSite: 'strict', // Protect against CSRF
-          path: '/' // Accessible across the site
+          path: '/', // Accessible across the site
         });
       } catch (error) {
         console.error('Error saving API keys to cookies:', error);
       }
     };
 
-    return (
+    const baseChat = (
       <div
         ref={ref}
         className={classNames(
           styles.BaseChat,
-          'relative flex h-full w-full overflow-hidden bg-bolt-elements-background-depth-1'
+          'relative flex flex-col lg:flex-row h-full w-full overflow-hidden bg-bolt-elements-background-depth-1',
         )}
         data-chat-visible={showChat}
       >
@@ -193,30 +174,18 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         <div ref={scrollRef} className="flex flex-col lg:flex-row overflow-y-auto w-full h-full">
           <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
-              <div id="intro" className="mt-[5vh] max-w-chat mx-auto text-center">
-                <h1 className="text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
-                  Welcome to <a src="https://github.com/coleam00/bolt.new-any-llm">Open Source Bolt.New/oTToDev</a>
+              <div id="intro" className="mt-[26vh] max-w-chat mx-auto text-center px-4 lg:px-0">
+                <h1 className="text-3xl lg:text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
+                  Where ideas begin
                 </h1>
-                <p className="text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-                  1. A community-driven effort to build the best full-stack JavaScript AI development tool.
-                  Hosted by <a style={{ color: 'blue' }}
-                               href="https://www.youtube.com/channel/UCLIo-9WnXvQcXfXomQvYSOg/">Eduards
-                  Ruzga 🔗</a>
-                </p>
-                <GitHubBadge />
-                <p className="text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-                  3. Not all APIs and LLMs are free. Check <a style={{ color: 'blue' }}
-                                                              href="https://github.com/cheahjs/free-llm-api-resources">this
-                  List of free LLM APIs</a>
-                </p>
-                <p className="text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-                  4. Pick provider and model. Click on Get API Key. Add API key. Give it a try. Some models may fail. Work in progress!
+                <p className="text-md lg:text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
+                  Bring ideas to life in seconds or get help on existing projects.
                 </p>
               </div>
-              )}
+            )}
             <div
-              className={classNames('pt-6 px-6', {
-                'h-full flex flex-col': chatStarted
+              className={classNames('pt-6 px-2 sm:px-6', {
+                'h-full flex flex-col': chatStarted,
               })}
             >
               <ClientOnly>
@@ -233,13 +202,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               </ClientOnly>
               <div
                 className={classNames(
-                  'bg-bolt-elements-background-depth-2 border-y border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
+                  ' bg-bolt-elements-background-depth-2 p-3 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt mb-6',
                   {
-                    'sticky bottom-0': chatStarted
-                  })}
+                    'sticky bottom-2': chatStarted,
+                  },
+                )}
               >
                 <ModelSelector
-                  key={provider?.name + ':' + modelList.length}
                   key={provider?.name + ':' + modelList.length}
                   model={model}
                   setModel={setModel}
@@ -247,6 +216,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   provider={provider}
                   setProvider={setProvider}
                   providerList={PROVIDER_LIST}
+                  apiKeys={apiKeys}
                 />
 
                 {provider && (
@@ -259,7 +229,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
                 <div
                   className={classNames(
-                    'shadow-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background backdrop-filter backdrop-blur-[8px] rounded-lg overflow-hidden transition-all'
+                    'shadow-lg border border-bolt-elements-borderColor bg-bolt-elements-prompt-background backdrop-filter backdrop-blur-[8px] rounded-lg overflow-hidden transition-all',
                   )}
                 >
                   <textarea
@@ -282,7 +252,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     }}
                     style={{
                       minHeight: TEXTAREA_MIN_HEIGHT,
-                      maxHeight: TEXTAREA_MAX_HEIGHT
+                      maxHeight: TEXTAREA_MAX_HEIGHT,
                     }}
                     placeholder="How can Bolt help you today?"
                     translate="no"
@@ -311,14 +281,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         className={classNames('transition-all', {
                           'opacity-100!': enhancingPrompt,
                           'text-bolt-elements-item-contentAccent! pr-1.5 enabled:hover:bg-bolt-elements-item-backgroundAccent!':
-                          promptEnhanced
+                            promptEnhanced,
                         })}
                         onClick={() => enhancePrompt?.()}
                       >
                         {enhancingPrompt ? (
                           <>
-                            <div
-                              className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl animate-spin"></div>
+                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl animate-spin"></div>
                             <div className="ml-1.5">Enhancing prompt...</div>
                           </>
                         ) : (
@@ -332,8 +301,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     </div>
                     {input.length > 3 ? (
                       <div className="text-xs text-bolt-elements-textTertiary">
-                        Use <kbd
-                        className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Shift</kbd> +{' '}
+                        Use <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Shift</kbd> +{' '}
                         <kbd className="kdb px-1.5 py-0.5 rounded bg-bolt-elements-background-depth-2">Return</kbd> for
                         a new line
                       </div>
@@ -342,46 +310,14 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </div>
               </div>
             </div>
-            {!chatStarted && (
-              <div id="examples" className="relative w-full max-w-xl mx-auto mt-8 flex justify-center mb-8">
-                <div className="flex w-full max-w-3xl mx-auto mt-8">
-                  {/* Video Section */}
-                  <div className="w-1/2 flex justify-center pr-4 mb-8">
-        <span>
-          <p className="text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-            Check latest updates and tutorials below
-          </p>
-          <a target="_blank" href="https://www.youtube.com/playlist?list=PL66Y6GLTMgUOZM9G7GwWqcUgCAKrx5TmI"><img src="http://i3.ytimg.com/vi/-VkGI-cUaWw/hqdefault.jpg"/></a>
-        </span>
-                  </div>
-
-                  {/* Options Section */}
-                  <div className="w-1/2 flex flex-col space-y-2 pl-4 [mask-image:linear-gradient(to_bottom,black_0%,transparent_180%)] hover:[mask-image:none]">
-                    {EXAMPLE_PROMPTS.map((examplePrompt, index) => {
-                      return (
-                        <button
-                          key={index}
-                          onClick={(event) => {
-                            sendMessage?.(event, examplePrompt.text);
-                          }}
-                          className="group flex items-center w-full gap-2 justify-center bg-transparent text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-theme"
-                        >
-                          {examplePrompt.text}
-                          <div className="i-ph:arrow-bend-down-left" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
+            {!chatStarted && ImportButtons(importChat)}
+            {!chatStarted && ExamplePrompts(sendMessage)}
           </div>
-          <ClientOnly>{() => <Workbench chatStarted={chatStarted} isStreaming={isStreaming} />
-          }</ClientOnly>
+          <ClientOnly>{() => <Workbench chatStarted={chatStarted} isStreaming={isStreaming} />}</ClientOnly>
         </div>
       </div>
-    )
-      ;
-  }
-);
+    );
 
+    return <Tooltip.Provider delayDuration={200}>{baseChat}</Tooltip.Provider>;
+  },
+);
