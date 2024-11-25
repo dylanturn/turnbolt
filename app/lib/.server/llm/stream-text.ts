@@ -40,12 +40,16 @@ function extractPropertiesFromMessage(message: Message): { model: string; provid
   return { model, provider, content: cleanedContent };
 }
 
+<<<<<<< HEAD
+export function streamText(messages: Messages, env: Env, options?: StreamingOptions, apiKeys?: Record<string, string>) {
+=======
 export function streamText(
   messages: Messages,
   env: Env,
   options?: StreamingOptions,
   apiKeys?: Record<string, string>
 ) {
+>>>>>>> e328649 (Remove server side check of models for now)
   let currentModel = DEFAULT_MODEL;
   let currentProvider = DEFAULT_PROVIDER;
 
@@ -53,9 +57,10 @@ export function streamText(
     if (message.role === 'user') {
       const { model, provider, content } = extractPropertiesFromMessage(message);
 
-      if (MODEL_LIST.find((m) => m.name === model)) {
-        currentModel = model;
-      }
+      // TODO removed for now teh check as we now use dynamic models in client, we need to have dynamic here too
+      //if (MODEL_LIST.find((m) => m.name === model)) {
+      currentModel = model;
+      //}
 
       currentProvider = provider;
 
